@@ -1,27 +1,5 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-module.exports = require('./lib/schema')
-
-// Patterns
-require('./lib/patterns/reference')
-require('./lib/patterns/nothing')
-require('./lib/patterns/anything')
-require('./lib/patterns/object')
-require('./lib/patterns/or')
-require('./lib/patterns/equality')
-require('./lib/patterns/regexp')
-require('./lib/patterns/class')
-require('./lib/patterns/schema')
-
-// Extensions
-require('./lib/extensions/Boolean')
-require('./lib/extensions/Number')
-require('./lib/extensions/String')
-require('./lib/extensions/Object')
-require('./lib/extensions/Array')
-require('./lib/extensions/Function')
-require('./lib/extensions/Schema')
-
-},{"./lib/extensions/Array":3,"./lib/extensions/Boolean":4,"./lib/extensions/Function":5,"./lib/extensions/Number":6,"./lib/extensions/Object":7,"./lib/extensions/Schema":8,"./lib/extensions/String":9,"./lib/patterns/anything":10,"./lib/patterns/class":11,"./lib/patterns/equality":12,"./lib/patterns/nothing":13,"./lib/patterns/object":14,"./lib/patterns/or":15,"./lib/patterns/reference":16,"./lib/patterns/regexp":17,"./lib/patterns/schema":18,"./lib/schema":19}],2:[function(require,module,exports){
+var fmap = require('./fmap')
 var Schema = module.exports = function() {}
 
 Schema.prototype = {
@@ -70,6 +48,14 @@ Schema.prototype = {
       json = {}
 
       if (this.doc != null) json.description = this.doc
+
+      if (this.definitions) {
+        json.definitions = fmap(this.definitions, function (subschema, id) {
+          var subjson = subschema.toJSON()
+          subjson.id = id
+          return subjson
+        })
+      }
 
       // Registering that this was serialized and storing the json
       session.serialized.objects.push(this)
@@ -144,7 +130,7 @@ Schema.fromJSON.def = Array.prototype.push.bind(fromJSONdefs)
 Schema.patterns = {}
 Schema.extensions = {}
 
-},{}],3:[function(require,module,exports){
+},{"./fmap":9}],2:[function(require,module,exports){
 var Schema          = require('../BaseSchema')
   , EqualitySchema  = require('../patterns/equality')
   , anything        = require('../patterns/anything').instance
@@ -262,7 +248,7 @@ Array.like = function(other) {
 
 Array.schema = new ArraySchema().wrap()
 
-},{"../BaseSchema":2,"../patterns/anything":10,"../patterns/equality":12}],4:[function(require,module,exports){
+},{"../BaseSchema":1,"../patterns/anything":10,"../patterns/equality":12}],3:[function(require,module,exports){
 var Schema = require('../BaseSchema')
 
 var BooleanSchema = module.exports = Schema.extensions.BooleanSchema = new Schema.extend({
@@ -294,14 +280,14 @@ Schema.fromJSON.def(function(sch) {
 
 Boolean.schema = booleanSchema
 
-},{"../BaseSchema":2}],5:[function(require,module,exports){
+},{"../BaseSchema":1}],4:[function(require,module,exports){
 var ReferenceSchema = require('../patterns/reference')
 
 Function.reference = function(f) {
   return new ReferenceSchema(f).wrap()
 }
 
-},{"../patterns/reference":16}],6:[function(require,module,exports){
+},{"../patterns/reference":16}],5:[function(require,module,exports){
 var Schema = require('../BaseSchema')
 
 var NumberSchema = module.exports = Schema.extensions.NumberSchema = Schema.extend({
@@ -421,7 +407,7 @@ Number.step       = Number.schema.step
 
 Number.Integer    = Number.step(1)
 
-},{"../BaseSchema":2}],7:[function(require,module,exports){
+},{"../BaseSchema":1}],6:[function(require,module,exports){
 var ReferenceSchema = require('../patterns/reference')
   , EqualitySchema = require('../patterns/equality')
   , ObjectSchema = require('../patterns/object')
@@ -436,7 +422,7 @@ Object.reference = function(o) {
 
 Object.schema = new ObjectSchema().wrap()
 
-},{"../patterns/equality":12,"../patterns/object":14,"../patterns/reference":16}],8:[function(require,module,exports){
+},{"../patterns/equality":12,"../patterns/object":14,"../patterns/reference":16}],7:[function(require,module,exports){
 var Schema = require('../BaseSchema')
   , schema = require('../schema')
 
@@ -516,7 +502,7 @@ Schema.fromJSON.def(function(sch) {
   }
 })
 
-},{"../BaseSchema":2,"../schema":19}],9:[function(require,module,exports){
+},{"../BaseSchema":1,"../schema":19}],8:[function(require,module,exports){
 var RegexpSchema = require('../patterns/regexp')
 
 String.of = function() {
@@ -534,7 +520,19 @@ String.of = function() {
 
 String.schema = new RegexpSchema().wrap()
 
-},{"../patterns/regexp":17}],10:[function(require,module,exports){
+},{"../patterns/regexp":17}],9:[function(require,module,exports){
+module.exports = function(obj, fn) {
+  var ret = {}
+  for (var k in obj) {
+    if (obj.hasOwnProperty(k)) {
+      ret[k] = fn(obj[k], k)
+    }
+  }
+  return ret;
+}
+
+
+},{}],10:[function(require,module,exports){
 var Schema = require('../BaseSchema')
 
 var AnythingSchema = module.exports = Schema.patterns.AnythingSchema = Schema.extend({
@@ -563,7 +561,7 @@ Schema.fromJSON.def(function(sch) {
   if (sch.type === 'any') return anything
 })
 
-},{"../BaseSchema":2}],11:[function(require,module,exports){
+},{"../BaseSchema":1}],11:[function(require,module,exports){
 var Schema = require('../BaseSchema')
 
 var ClassSchema = module.exports = Schema.patterns.ClassSchema = Schema.extend({
@@ -605,7 +603,7 @@ Schema.fromJS.def(function(constructor) {
   }
 })
 
-},{"../BaseSchema":2}],12:[function(require,module,exports){
+},{"../BaseSchema":1}],12:[function(require,module,exports){
 var Schema = require('../BaseSchema')
 
 // Object deep equality
@@ -656,7 +654,7 @@ Schema.fromJS.def(function(sch) {
   if (sch instanceof Array && sch.length === 1) return new EqualitySchema(sch[0])
 })
 
-},{"../BaseSchema":2}],13:[function(require,module,exports){
+},{"../BaseSchema":1}],13:[function(require,module,exports){
 var Schema = require('../BaseSchema')
 
 var NothingSchema = module.exports = Schema.patterns.NothingSchema = Schema.extend({
@@ -682,7 +680,7 @@ Schema.fromJSON.def(function(sch) {
   if (sch.type === 'null') return nothing
 })
 
-},{"../BaseSchema":2}],14:[function(require,module,exports){
+},{"../BaseSchema":1}],14:[function(require,module,exports){
 var Schema    = require('../BaseSchema')
     , anything  = require('./anything').instance
     , nothing   = require('./nothing').instance
@@ -958,7 +956,7 @@ Schema.fromJSON.def(function(json) {
     return new ObjectSchema(properties, other)
 })
 
-},{"../BaseSchema":2,"./anything":10,"./nothing":13}],15:[function(require,module,exports){
+},{"../BaseSchema":1,"./anything":10,"./nothing":13}],15:[function(require,module,exports){
 var Schema = require('../BaseSchema')
   , EqualitySchema = require('../patterns/equality')
 
@@ -1041,7 +1039,7 @@ Schema.fromJSON.def(function(sch) {
   }
 })
 
-},{"../BaseSchema":2,"../patterns/equality":12}],16:[function(require,module,exports){
+},{"../BaseSchema":1,"../patterns/equality":12}],16:[function(require,module,exports){
 var Schema = require('../BaseSchema')
 
 var ReferenceSchema = module.exports = Schema.patterns.ReferenceSchema = Schema.extend({
@@ -1083,7 +1081,7 @@ Schema.fromJS.def(function(value) {
   return new ReferenceSchema(value)
 })
 
-},{"../BaseSchema":2}],17:[function(require,module,exports){
+},{"../BaseSchema":1}],17:[function(require,module,exports){
 var Schema = require('../BaseSchema')
 
 var RegexpSchema = module.exports = Schema.patterns.RegexpSchema = Schema.extend({
@@ -1136,39 +1134,49 @@ Schema.fromJS.def(function(regexp) {
   if (regexp instanceof RegExp) return new RegexpSchema(regexp)
 })
 
-},{"../BaseSchema":2}],18:[function(require,module,exports){
+},{"../BaseSchema":1}],18:[function(require,module,exports){
 var Schema = require('../BaseSchema')
 
 Schema.fromJS.def(function(sch) {
   if (sch instanceof Schema) return sch
 })
 
-},{"../BaseSchema":2}],19:[function(require,module,exports){
+},{"../BaseSchema":1}],19:[function(require,module,exports){
+var fmap = require('./fmap')
 var Schema = require('./BaseSchema')
 
 schema = module.exports = function(schemaDescription) {
-  var doc, schemaObject
+  var doc, definitions, schemaObject
 
   if (arguments.length === 2) {
     doc = schemaDescription
     schemaDescription = arguments[1]
   }
 
+  if (arguments.length === 3) {
+    doc = schemaDescription
+    definitions = arguments[1]
+    schemaDescription = arguments[2]
+  }
+
   if (this instanceof schema) {
     // When called with new, create a schema object and then return the schema function
     var constructor = Schema.extend(schemaDescription)
     schemaObject = new constructor()
-    if (doc) schemaObject.doc = doc
-    return schemaObject.wrap()
 
   } else {
     // When called as simple function, forward everything to fromJS
     // and then resolve schema.self to the resulting schema object
     schemaObject = Schema.fromJS(schemaDescription)
     schema.self.resolve(schemaObject)
-    if (doc) schemaObject.doc = doc
-    return schemaObject.wrap()
   }
+  if (definitions) schemaObject.definitions = fmap(definitions, function (def, id) {
+    var sch = Schema.fromJS(def)
+    sch.id = id
+    return sch
+  })
+  if (doc) schemaObject.doc = doc
+  return schemaObject.wrap()
 }
 
 schema.Schema = Schema
@@ -1191,4 +1199,28 @@ if (typeof define === 'function' && define.amd) {
     return schema;
   });
 }
-},{"./BaseSchema":2}]},{},[1]);
+
+},{"./BaseSchema":1,"./fmap":9}],20:[function(require,module,exports){
+module.exports = require('./lib/schema')
+
+// Patterns
+require('./lib/patterns/reference')
+require('./lib/patterns/nothing')
+require('./lib/patterns/anything')
+require('./lib/patterns/object')
+require('./lib/patterns/or')
+require('./lib/patterns/equality')
+require('./lib/patterns/regexp')
+require('./lib/patterns/class')
+require('./lib/patterns/schema')
+
+// Extensions
+require('./lib/extensions/Boolean')
+require('./lib/extensions/Number')
+require('./lib/extensions/String')
+require('./lib/extensions/Object')
+require('./lib/extensions/Array')
+require('./lib/extensions/Function')
+require('./lib/extensions/Schema')
+
+},{"./lib/extensions/Array":2,"./lib/extensions/Boolean":3,"./lib/extensions/Function":4,"./lib/extensions/Number":5,"./lib/extensions/Object":6,"./lib/extensions/Schema":7,"./lib/extensions/String":8,"./lib/patterns/anything":10,"./lib/patterns/class":11,"./lib/patterns/equality":12,"./lib/patterns/nothing":13,"./lib/patterns/object":14,"./lib/patterns/or":15,"./lib/patterns/reference":16,"./lib/patterns/regexp":17,"./lib/patterns/schema":18,"./lib/schema":19}]},{},[20]);
